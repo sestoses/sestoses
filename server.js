@@ -20,8 +20,19 @@ const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws) => {
     console.log('Yeni bir istemci bağlandı.');
+
     ws.on('message', (message) => {
-        console.log('Gelen mesaj:', message.toString());
+        console.log('Gelen mesaj, diğerlerine iletiliyor...');
+        // Gelen mesajı bağlanan diğer tüm istemcilere gönder
+        wss.clients.forEach((client) => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(message);
+            }
+        });
+    });
+
+    ws.on('close', () => {
+        console.log('Bir istemci ayrıldı.');
     });
 });
 
