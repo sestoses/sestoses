@@ -8,7 +8,7 @@ const server = http.createServer((req, res) => {
     fs.readFile(filePath, (err, content) => {
         if (err) {
             res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-            res.end('Sunucu hatası: index.html bulunamadı.');
+            res.end('Sunucu hatasi: index.html bulunamadi');
         } else {
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(content, 'utf-8');
@@ -26,6 +26,6 @@ wss.on('connection', (ws) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Sunucu ${PORT} portunda başarıyla çalışıyor.`);
+server.listen(PORT, () => {
+    console.log(`Sunucu ${PORT} portunda başarıyla çalışıyor`);
 });
