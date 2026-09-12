@@ -1,82 +1,136 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebRTC PTT Client</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #121212; color: #fff; }
-    #pttBtn { width: 200px; height: 200px; border-radius: 50%; background: #ff4444; color: white; font-size: 24px; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.2s; }
-    #pttBtn.active { background: #00C851; transform: scale(0.95); }
-    #status { margin-top: 20px; font-size: 18px; color: #aaa; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bas & Konuş (PTT)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        #pttButton {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: none;
+            background-color: #ff4d4d;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(255, 77, 77, 0.4);
+            transition: 0.2s;
+            outline: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #pttButton:active, #pttButton.active {
+            background-color: #cc0000;
+            transform: scale(0.95);
+        }
+        #status {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
+        }
+    </style>
 </head>
 <body>
 
-  <h2>WebRTC PTT Telsiz</h2>
-  <p id="status">Bağlanıyor...</p>
-  <br>
-  <button id="pttBtn">Bas & Konuş</button>
+    <div class="container">
+        <h2>Bas & Konuş Telsiz</h2>
+        <button id="pttButton">KONUŞMAK İÇİN BAS</button>
+        <div id="status">Bağlantı bekleniyor...</div>
+    </div>
 
-  <script>
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-    // Railway public domain adresimiz:
-    const wsUrl = wsProtocol + 'sestoses-production.up.railway.app';
-    const ws = new WebSocket(wsUrl);
+    <script>
+        const statusDiv = document.getElementById('status');
+        const pttButton = document.getElementById('pttButton');
 
-    const statusEl = document.getElementById('status');
-    const pttBtn = document.getElementById('pttBtn');
-    
-    let mediaRecorder;
-    let audioChunks = [];
+        // WebSocket bağlantısı (Sunucu adresi otomatik algılanır)
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${protocol}//${window.location.host}`);
 
-    ws.onopen = () => { statusEl.innerText = "Bağlantı Kuruldu. Konuşmaya Hazır!"; };
-    ws.onclose = () => { statusEl.innerText = "Bağlantı Kesildi."; };
+        let mediaRecorder;
+        let audioChunks = [];
 
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-      mediaRecorder = new MediaRecorder(stream);
+        ws.onopen = () => {
+            statusDiv.innerText = 'Bağlantı kuruldu. Konuşabilirsiniz.';
+        };
 
-      mediaRecorder.ondataavailable = event => {
-        if (event.data.size > 0) {
-          ws.send(event.data);
-        }
-      };
+        ws.onclose = () => {
+            statusDiv.innerText = 'Bağlantı koptu. Yeniden bağlanılıyor...';
+        };
 
-      mediaRecorder.onstop = () => {
-        audioChunks = [];
-      };
-    }).catch(err => {
-      statusEl.innerText = "Mikrofon izni reddedildi!";
-    });
+        // Gelen ses verisini oynatma
+        ws.onmessage = async (event) => {
+            const audioBlob = new Blob([event.data], { type: 'audio/webm' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play().catch(e => console.log('Ses çalma hatası:', e));
+        };
 
-    ws.onmessage = async (event) => {
-      const audioBlob = new Blob([event.data], { type: 'audio/webm' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audio.play();
-    };
+        // Mikrofon izni ve kaydı hazırlama
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
-    // Bas & Konuş tuş özellikleri (Dokunma ve Mouse desteği)
-    pttBtn.addEventListener('mousedown', startTalking);
-    pttBtn.addEventListener('mouseup', stopTalking);
-    pttBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startTalking(); });
-    pttBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopTalking(); });
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+                        ws.send(event.data);
+                    }
+                };
 
-    function startTalking() {
-      if (mediaRecorder && mediaRecorder.state === 'inactive') {
-        mediaRecorder.start();
-        pttBtn.classList.add('active');
-        statusEl.innerText = "Konuşuluyor...";
-      }
-    }
+                // Bas-konuş olayları (Mouse ve Dokunmatik desteği)
+                const startRecording = () => {
+                    if (mediaRecorder && mediaRecorder.state === 'inactive') {
+                        audioChunks = [];
+                        mediaRecorder.start(200); // 200ms'lik paketler halinde gecikmesiz gönderim
+                        pttButton.classList.add('active');
+                        statusDiv.innerText = 'Konuşuluyor...';
+                    }
+                };
 
-    function stopTalking() {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-        pttBtn.classList.remove('active');
-        statusEl.innerText = "Dinleniyor...";
-      }
-    }
-  </script>
+                const stopRecording = () => {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                        pttButton.classList.remove('active');
+                        statusDiv.innerText = 'Dinleniyor...';
+                    }
+                };
+
+                // Bilgisayar için mouse olayları
+                pttButton.addEventListener('mousedown', startRecording);
+                pttButton.addEventListener('mouseup', stopRecording);
+
+                // Telefonlar için dokunmatik olayları
+                pttButton.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    startRecording();
+                });
+                pttButton.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    stopRecording();
+                });
+            })
+            .catch(err => {
+                statusDiv.innerText = 'Mikrofon izni reddedildi veya hata oluştu!';
+                console.error(err);
+            });
+    </script>
 </body>
 </html>
