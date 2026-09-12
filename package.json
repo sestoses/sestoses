@@ -1,7 +1,7 @@
 {
   "name": "sestoses",
   "version": "1.0.0",
-  "description": "WebRTC PTT Server",
+  "description": "PTT App",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
