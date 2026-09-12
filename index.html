@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC PTT Client</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #121212; color: #fff; }
+    #pttBtn { width: 200px; height: 200px; border-radius: 50%; background: #ff4444; color: white; font-size: 24px; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.2s; }
+    #pttBtn.active { background: #00C851; transform: scale(0.95); }
+    #status { margin-top: 20px; font-size: 18px; color: #aaa; }
+  </style>
+</head>
+<body>
+
+  <h2>WebRTC PTT Telsiz</h2>
+  <p id="status">Bağlanıyor...</p>
+  <br>
+  <button id="pttBtn">Bas & Konuş</button>
+
+  <script>
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    // Railway public domain adresimiz:
+    const wsUrl = wsProtocol + 'sestoses-production.up.railway.app';
+    const ws = new WebSocket(wsUrl);
+
+    const statusEl = document.getElementById('status');
+    const pttBtn = document.getElementById('pttBtn');
+    
+    let mediaRecorder;
+    let audioChunks = [];
+
+    ws.onopen = () => { statusEl.innerText = "Bağlantı Kuruldu. Konuşmaya Hazır!"; };
+    ws.onclose = () => { statusEl.innerText = "Bağlantı Kesildi."; };
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = event => {
+        if (event.data.size > 0) {
+          ws.send(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        audioChunks = [];
+      };
+    }).catch(err => {
+      statusEl.innerText = "Mikrofon izni reddedildi!";
+    });
+
+    ws.onmessage = async (event) => {
+      const audioBlob = new Blob([event.data], { type: 'audio/webm' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.play();
+    };
+
+    // Bas & Konuş tuş özellikleri (Dokunma ve Mouse desteği)
+    pttBtn.addEventListener('mousedown', startTalking);
+    pttBtn.addEventListener('mouseup', stopTalking);
+    pttBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startTalking(); });
+    pttBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopTalking(); });
+
+    function startTalking() {
+      if (mediaRecorder && mediaRecorder.state === 'inactive') {
+        mediaRecorder.start();
+        pttBtn.classList.add('active');
+        statusEl.innerText = "Konuşuluyor...";
+      }
+    }
+
+    function stopTalking() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        pttBtn.classList.remove('active');
+        statusEl.innerText = "Dinleniyor...";
+      }
+    }
+  </script>
+</body>
+</html>
