@@ -1,13 +1,13 @@
 {
   "name": "sestoses",
   "version": "1.0.0",
-  "description": "PTT App",
+  "description": "WebRTC PTT App",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "node-cron": "^3.0.3",
-    "ws": "^8.16.0"
+    "express": "latest",
+    "node-cron": "latest"
   }
 }
