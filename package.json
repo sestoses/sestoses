@@ -1,13 +1,12 @@
 {
-  "name": "sestoses",
-  "version": "1.0.0",
-  "description": "WebRTC PTT App",
+  "name": "sestoses-v3",
+  "version": "3.0.0",
+  "description": "Sestoses v3.0 Emergency Coordination Ecosystem",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "latest",
-    "node-cron": "latest"
+    "ws": "^8.16.0"
   }
 }
