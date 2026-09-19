@@ -1,34 +1,35 @@
 const express = require('express');
 const http = require('http');
 const { WebSocketServer } = require('ws');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-// Statik dosyaları sunmak için (index.html ana dizindeyse)
-app.use(express.static(__dirname));
+// Statik dosyaları sunma (index.html ana dizinde olmalı)
+app.use(express.static(path.join(__dirname)));
 
-// WebSocket bağlantı yönetimi
+// WebSocket Bağlantı Yönetimi
 wss.on('connection', (ws) => {
-  console.log('Yeni bir istemci bağlandı.');
+    console.log('Yeni bir kullanıcı bağlandı.');
 
-  ws.on('message', (message) => {
-    // Gelen mesajı bağlı tüm istemcilere yayınla (broadcast)
-    wss.clients.forEach((client) => {
-      if (client.readyState === ws.OPEN) {
-        client.send(message.toString());
-      }
+    ws.on('message', (message) => {
+        // Gelen ses veya JSON (Durak/SOS) verisini bağlı diğer tüm kullanıcılara yayınla (broadcast)
+        wss.clients.forEach((client) => {
+            if (client !== ws && client.readyState === ws.OPEN) {
+                client.send(message);
+            }
+        });
     });
-  });
 
-  ws.on('close', () => {
-    console.log('İstemci bağlantısı kesildi.');
-  });
+    ws.on('close', () => {
+        console.log('Kullanıcı bağlantısı koptu.');
+    });
 });
 
 // Railway'in atadığı dinamik portu kullan
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Sestoses v3.0 sunucusu ${PORT} portunda başarıyla çalışıyor.`);
+server.listen(PORT, () => {
+    console.log(`Sunucu ${PORT} portunda başarıyla çalışıyor.`);
 });
